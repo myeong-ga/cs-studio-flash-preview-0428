@@ -10,3 +10,11 @@
 - 그러므로 여러모로 인해 KV 같은 Persistant Layer 를 마련하는 것이 좋다.
 
 
+
+## CS Studio Setup
+
+- .env.local.example file 을 .env.local 파일로 copy
+
+- GOOGLE_GENERATIVE_AI_API_KEY 는 AI SDK 에서 사용하는 key 값이고 GEMINI_API_KEY 는 google genai 에서 사용되는 key 값으로 두개의 값은 동일합니다.
+
+
