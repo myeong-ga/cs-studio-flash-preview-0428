@@ -1,0 +1,203 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 207 100% 42%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 207 100% 42%;
+    --radius: 0.5rem;
+
+    /* Sidebar */
+    --sidebar: 0 0% 100%;
+    --sidebar-foreground: 222.2 84% 4.9%;
+    --sidebar-primary: 207 100% 42%;
+    --sidebar-primary-foreground: 210 40% 98%;
+    --sidebar-accent: 207 100% 97%;
+    --sidebar-accent-foreground: 207 100% 42%;
+    --sidebar-border: 214.3 31.8% 91.4%;
+    --sidebar-ring: 207 100% 42%;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 207 100% 42%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 207 100% 42%;
+
+    /* Sidebar */
+    --sidebar: 222.2 84% 4.9%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 207 100% 42%;
+    --sidebar-primary-foreground: 210 40% 98%;
+    --sidebar-accent: 217.2 32.6% 17.5%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 217.2 32.6% 17.5%;
+    --sidebar-ring: 207 100% 42%;
+  }
+}
+
+/* Custom theme for SimulationContainer */
+.simulation-theme {
+  --sim-background: oklch(0.95 0.01 102.46);
+  --sim-foreground: oklch(0.41 0.03 40.36);
+  --sim-card: oklch(0.95 0.01 102.46);
+  --sim-card-foreground: oklch(0.41 0.03 40.36);
+  --sim-primary: oklch(0.61 0.06 44.36);
+  --sim-primary-foreground: oklch(1.0 0 0);
+  --sim-secondary: oklch(0.75 0.04 80.55);
+  --sim-secondary-foreground: oklch(1.0 0 0);
+  --sim-muted: oklch(0.85 0.04 49.09);
+  --sim-muted-foreground: oklch(0.54 0.05 37.21);
+  --sim-border: oklch(0.75 0.04 80.55);
+}
+
+.dark .simulation-theme {
+  --sim-background: oklch(0.27 0.01 48.18);
+  --sim-foreground: oklch(0.95 0.01 102.46);
+  --sim-card: oklch(0.33 0.02 50.89);
+  --sim-card-foreground: oklch(0.95 0.01 102.46);
+  --sim-primary: oklch(0.73 0.05 52.33);
+  --sim-primary-foreground: oklch(0.27 0.01 48.18);
+  --sim-secondary: oklch(0.54 0.05 37.21);
+  --sim-secondary-foreground: oklch(0.95 0.01 102.46);
+  --sim-muted: oklch(0.41 0.03 40.36);
+  --sim-muted-foreground: oklch(0.76 0.04 50.86);
+  --sim-border: oklch(0.41 0.03 40.36);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  .font-geist-mono {
+    font-family: var(--font-geist-mono), monospace;
+  }
+}
+
+.microsoft-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #c7c7c7 transparent;
+}
+
+.microsoft-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.microsoft-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.microsoft-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #c7c7c7;
+  border-radius: 4px;
+}
+
+.microsoft-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: #a19f9d;
+}
+
+.microsoft-card {
+  box-shadow: 0 1.6px 3.6px 0 rgba(0, 0, 0, 0.132), 0 0.3px 0.9px 0 rgba(0, 0, 0, 0.108);
+  border-radius: 2px;
+}
+
+.microsoft-button {
+  font-weight: 600;
+  border-radius: 2px;
+  transition: all 0.1s ease;
+}
+
+.microsoft-button:hover {
+  box-shadow: 0 1.6px 3.6px 0 rgba(0, 0, 0, 0.132), 0 0.3px 0.9px 0 rgba(0, 0, 0, 0.108);
+}
+
+
+/* Simulation theme specific styles */
+.simulation-theme .sim-card {
+  background-color: var(--sim-card);
+  color: var(--sim-card-foreground);
+  box-shadow: var(--shadow);
+}
+
+.simulation-theme .sim-header {
+  background-color: var(--sim-primary);
+  color: var(--sim-primary-foreground);
+}
+
+.simulation-theme .sim-button {
+  background-color: var(--sim-primary);
+  color: var(--sim-primary-foreground);
+}
+
+.simulation-theme .sim-button:hover {
+  background-color: color-mix(in oklch, var(--sim-primary), black 10%);
+}
+
+.simulation-theme .sim-button-secondary {
+  background-color: var(--sim-secondary);
+  color: var(--sim-secondary-foreground);
+}
+
+.simulation-theme .sim-button-secondary:hover {
+  background-color: color-mix(in oklch, var(--sim-secondary), black 10%);
+}
+
+.simulation-theme .sim-input {
+  border-color: var(--sim-border);
+}
+
+.simulation-theme .sim-input:focus {
+  border-color: var(--sim-primary);
+  box-shadow: 0 0 0 2px color-mix(in oklch, var(--sim-primary), transparent 70%);
+}
+
+.simulation-theme .sim-message-user {
+  background-color: var(--sim-primary);
+  color: var(--sim-primary-foreground);
+}
+
+.simulation-theme .sim-message-assistant {
+  background-color: var(--sim-secondary);
+  color: var(--sim-secondary-foreground);
+}
+
+.simulation-theme .sim-muted-text {
+  color: var(--sim-muted-foreground);
+}
