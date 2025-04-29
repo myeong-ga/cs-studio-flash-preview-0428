@@ -9,7 +9,7 @@
 
 - 그러므로 여러모로 인해 KV 같은 Persistant Layer 를 마련하는 것이 좋다.
 
-
+- cache 생성은 LLM 상황에 따라 언제 해소될지 모르는 Job 이다. Trigger.dev 혹은 Superbase Function 을 생각해볼 수 있다
 
 ## CS Studio Setup
 
