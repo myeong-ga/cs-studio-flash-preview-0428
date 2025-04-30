@@ -11,7 +11,7 @@
 
 - cache 생성은 LLM 상황에 따라 언제 해소될지 모르는 Job 이다. Trigger.dev 혹은 Superbase Function 을 생각해볼 수 있다
 
-- Cache 이중화도 고려해볼만 하다 
+- Google Generative AI 캐시 생성과 같은 장시간 실행 프로세스를 안정적으로 보장하기 어렵습니다. Trigger.dev나 Supabase Functions와 같은 외부 서비스를 통합하여 캐시 생성 및 이중화를 구현하는 것이 가장 효과적인 접근 방식입니다.
 
 
 ## CS Studio Setup
