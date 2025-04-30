@@ -11,6 +11,9 @@
 
 - cache 생성은 LLM 상황에 따라 언제 해소될지 모르는 Job 이다. Trigger.dev 혹은 Superbase Function 을 생각해볼 수 있다
 
+- Cache 이중화도 고려해볼만 하다 
+
+
 ## CS Studio Setup
 
 - .env.local.example file 을 .env.local 파일로 copy

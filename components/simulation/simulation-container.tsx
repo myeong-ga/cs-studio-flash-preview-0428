@@ -3,15 +3,18 @@ import { CustomerChat } from "@/components/simulation/customer-chat"
 import { OperatorChat } from "@/components/simulation/operator-chat"
 import { CustomerInfo } from "@/components/simulation/customer-info"
 import { useChatSimulation } from "@/hooks/use-chat-simulation"
-import { useCacheValidation } from "@/hooks/use-cache-validation"
+import { Switch } from "@/components/ui/switch"
+import { Label } from "@/components/ui/label"
 import { Loader2 } from "lucide-react"
 
-export function SimulationContainer() {
+// SimulationContainer 컴포넌트 수정 - 캐시 검증 로직 제거
+export function SimulationContainer({ bypassCacheCheck = false, isLoading = false }) {
   const chatSimulation = useChatSimulation()
-  const { isValidating, isInitializing } = useCacheValidation()
 
-  // Show loading state while validating cache
-  if (isValidating || isInitializing) {
+  // 캐시 검증 관련 useEffect 및 로딩 상태 표시 로직 제거
+
+  // 로딩 상태는 부모 컴포넌트에서 전달받음
+  if (isLoading && !bypassCacheCheck) {
     return (
       <div className="flex items-center justify-center h-[calc(100vh-12rem)]">
         <div className="text-center">
@@ -25,6 +28,21 @@ export function SimulationContainer() {
 
   return (
     <div className="min-w-[1440px] overflow-auto font-geist-mono simulation-theme">
+      {/* 모의 데이터 토글 스위치 추가 */}
+      <div className="flex items-center justify-end mb-4 gap-2">
+        <Label htmlFor="mock-data-toggle" className="text-sm font-medium">
+          모의 데이터 사용
+        </Label>
+        <Switch
+          id="mock-data-toggle"
+          checked={chatSimulation.useMockData}
+          onCheckedChange={chatSimulation.toggleMockData}
+        />
+        {chatSimulation.useMockData && (
+          <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">모의 데이터 활성화됨</span>
+        )}
+      </div>
+
       <div className="grid grid-cols-4 gap-6 h-[calc(100vh-12rem)]">
         {/* Customer View - 1/4 width */}
         <div className="flex flex-col">
@@ -70,7 +88,11 @@ export function SimulationContainer() {
 
             {/* Customer Info Area - 2/5 width */}
             <div className="col-span-2 overflow-auto">
-              <CustomerInfo useSimTheme={false} recommendedActions={chatSimulation.recommendedActions} />
+              <CustomerInfo
+                useSimTheme={false}
+                recommendedActions={chatSimulation.recommendedActions}
+                onExecuteTool={chatSimulation.handleExecuteTool}
+              />
             </div>
           </div>
         </div>

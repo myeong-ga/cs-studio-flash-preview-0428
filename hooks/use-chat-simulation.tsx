@@ -1,9 +1,10 @@
 "use client"
 
 import type React from "react"
-import { useState, useCallback, useEffect, useRef } from "react"
-import type { Message, SuggestedMessage, Action } from "@/lib/types"
+import { useState, useCallback, useEffect } from "react"
+import type { Message, SuggestedMessage, Action, ToolCall } from "@/types/chat"
 import { useStore } from "@/lib/store"
+import { requiresConfirmation } from "@/lib/tools/tools"
 
 // 초기 메시지 설정
 const initialMessages: Message[] = [
@@ -20,9 +21,8 @@ export function useChatSimulation() {
   const [isLoading, setIsLoading] = useState(false)
   const [suggestedMessage, setSuggestedMessage] = useState<SuggestedMessage | null>(null)
   const [recommendedActions, setRecommendedActions] = useState<Action[]>([])
-
-  // 누적된 응답을 추적하기 위한 ref
-  const accumulatedResponseRef = useRef<string>("")
+  const [currentToolCalls, setCurrentToolCalls] = useState<ToolCall[]>([])
+  const [useMockData, setUseMockData] = useState(false) // 모의 데이터 사용 여부
 
   // 편집 모드 상태와 편집 중인 메시지 내용을 추가합니다
   const [isEditingMessage, setIsEditingMessage] = useState(false)
@@ -44,6 +44,12 @@ export function useChatSimulation() {
       })
     }
   }, [suggestedMessage])
+
+  // 모의 데이터 사용 토글 함수
+  const toggleMockData = useCallback(() => {
+    setUseMockData((prev) => !prev)
+    console.log(`[HOOK] Mock data ${!useMockData ? "enabled" : "disabled"}`)
+  }, [useMockData])
 
   // 편집 시작 함수 추가
   const handleEditSuggestedMessage = useCallback(() => {
@@ -79,11 +85,8 @@ export function useChatSimulation() {
     setCustomerInput("")
     setIsLoading(true)
 
-    // 응답 누적 ref 초기화
-    accumulatedResponseRef.current = ""
-
     try {
-      // API 호출하여 Gemini 응답 가져오기
+      // API 호출하여 응답 가져오기
       console.log("[HOOK] Sending request to API")
       const response = await fetch("/api/chat", {
         method: "POST",
@@ -93,6 +96,7 @@ export function useChatSimulation() {
         body: JSON.stringify({
           messages: [...messages, userMessage],
           cacheName: cache.isCreated ? cache.cacheName : undefined,
+          useMockData, // 모의 데이터 사용 여부 전달
         }),
       })
 
@@ -106,6 +110,8 @@ export function useChatSimulation() {
       // 텍스트 디코더 생성
       const decoder = new TextDecoder()
       let buffer = ""
+      const toolCalls: ToolCall[] = []
+      let messageContent = ""
 
       // Stream 처리
       console.log("[HOOK] Starting to process stream response")
@@ -119,8 +125,6 @@ export function useChatSimulation() {
         // 새로운 청크를 디코딩
         const chunk = decoder.decode(value, { stream: true })
         buffer += chunk
-
-        console.log("[HOOK] Received chunk:", chunk)
 
         // 줄 단위로 처리 (각 줄이 완전한 JSON 객체라고 가정)
         const lines = buffer.split("\n")
@@ -136,26 +140,49 @@ export function useChatSimulation() {
             const parsedData = JSON.parse(line)
             console.log("[HOOK] Successfully parsed JSON:", parsedData)
 
-            // 텍스트 누적
+            // Handle text chunks
             if (parsedData.text) {
-              accumulatedResponseRef.current += parsedData.text
+              messageContent += parsedData.text
 
-              // 누적된 전체 응답으로 suggestedMessage 업데이트
-              const newSuggestedMessage: SuggestedMessage = {
+              // Update suggested message with the content
+              setSuggestedMessage({
                 type: "message",
                 role: "agent",
                 id: Date.now().toString(),
-                content: [{ text: accumulatedResponseRef.current }],
+                content: [{ text: messageContent }],
                 status: "pending",
+              })
+            }
+
+            // Handle tool calls
+            if (parsedData.toolCall) {
+              console.log("[HOOK] Tool call received:", parsedData.toolCall)
+
+              const toolCall = parsedData.toolCall
+              toolCalls.push(toolCall)
+
+              // Create action from tool call if it requires confirmation
+              if (requiresConfirmation(toolCall.function.name)) {
+                try {
+                  const parsedArgs = JSON.parse(toolCall.function.arguments)
+                  const action: Action = {
+                    name: toolCall.function.name,
+                    parameters: parsedArgs,
+                  }
+
+                  // Update recommended actions
+                  setRecommendedActions((prev) => {
+                    // Check if this action already exists
+                    const exists = prev.some((a) => a.name === action.name)
+                    if (!exists) {
+                      return [...prev, action]
+                    }
+                    return prev
+                  })
+                } catch (e) {
+                  console.error("[HOOK] Error parsing tool call arguments:", e)
+                }
               }
-
-              console.log(
-                "[HOOK] Updating suggested message with accumulated text:",
-                accumulatedResponseRef.current.substring(0, 50) +
-                  (accumulatedResponseRef.current.length > 50 ? "..." : ""),
-              )
-
-              setSuggestedMessage(newSuggestedMessage)
             }
           } catch (e) {
             console.error("[HOOK] Error parsing JSON line:", line, e)
@@ -163,45 +190,28 @@ export function useChatSimulation() {
         }
       }
 
-      // 버퍼에 남은 내용 처리
-      if (buffer.trim() !== "") {
+      // Process any remaining buffer
+      if (buffer.trim()) {
         try {
           const parsedData = JSON.parse(buffer)
           if (parsedData.text) {
-            accumulatedResponseRef.current += parsedData.text
-
-            // 최종 메시지 설정
-            const finalSuggestedMessage: SuggestedMessage = {
+            messageContent += parsedData.text
+            setSuggestedMessage({
               type: "message",
               role: "agent",
               id: Date.now().toString(),
-              content: [{ text: accumulatedResponseRef.current }],
+              content: [{ text: messageContent }],
               status: "pending",
-            }
-
-            setSuggestedMessage(finalSuggestedMessage)
+            })
           }
         } catch (e) {
-          console.error("[HOOK] Error parsing final buffer:", buffer, e)
+          console.error("[HOOK] Error parsing final buffer:", e)
         }
       }
 
-      // 스트림이 완료된 후 최종 메시지 설정
-      if (accumulatedResponseRef.current) {
-        const finalSuggestedMessage: SuggestedMessage = {
-          type: "message",
-          role: "agent",
-          id: Date.now().toString(),
-          content: [{ text: accumulatedResponseRef.current }],
-          status: "pending",
-        }
-
-        console.log(
-          "[HOOK] Setting final suggested message:",
-          accumulatedResponseRef.current.substring(0, 50) + (accumulatedResponseRef.current.length > 50 ? "..." : ""),
-        )
-
-        setSuggestedMessage(finalSuggestedMessage)
+      // Store current tool calls for later use
+      if (toolCalls.length > 0) {
+        setCurrentToolCalls(toolCalls)
       }
     } catch (error) {
       console.error("[HOOK] Error getting AI response:", error)
@@ -215,7 +225,6 @@ export function useChatSimulation() {
       })
     } finally {
       setIsLoading(false)
-      console.log("[HOOK] Request completed, loading state set to false")
     }
   }
 
@@ -248,9 +257,6 @@ export function useChatSimulation() {
     setIsEditingMessage(false)
     setEditedMessageContent("")
     console.log("[HOOK] Suggested message cleared and edit mode reset")
-
-    // 누적된 응답 초기화
-    accumulatedResponseRef.current = ""
   }, [suggestedMessage, isEditingMessage, editedMessageContent])
 
   // 상담사 메시지 제출 처리
@@ -269,6 +275,56 @@ export function useChatSimulation() {
     setMessages((prev) => [...prev, assistantMessage])
     setOperatorInput("")
     console.log("[HOOK] Messages updated with operator's custom message")
+  }
+
+  // Handle executing a tool
+  const handleExecuteTool = async (actionName: string, parameters: any) => {
+    console.log(`[HOOK] Executing tool: ${actionName} with parameters:`, parameters)
+
+    // Find the matching tool call\
+    const toolCall = currentToolCalls.find((call) => call.function.name === actionName)
+
+    if (!toolCall) {
+      console.error(`[HOOK] No matching tool call found for ${actionName}`)
+      return
+    }
+
+    try {
+      // Here you would actually execute the tool
+      // For now, we'll just simulate a response
+
+      // Add a message indicating the tool is being executed
+      const toolMessage: Message = {
+        role: "system",
+        content: `Executing ${actionName}...`,
+      }
+
+      setMessages((prev) => [...prev, toolMessage])
+
+      // Remove the action from recommended actions
+      setRecommendedActions((prev) => prev.filter((action) => action.name !== actionName))
+
+      // In a real implementation, you would call the actual tool function here
+      // const result = await executeTool(actionName, parameters)
+
+      // For now, simulate a response
+      const resultMessage: Message = {
+        role: "system",
+        content: `${actionName} executed successfully with parameters: ${JSON.stringify(parameters)}`,
+      }
+
+      setMessages((prev) => [...prev, resultMessage])
+    } catch (error) {
+      console.error(`[HOOK] Error executing tool ${actionName}:`, error)
+
+      // Add error message
+      const errorMessage: Message = {
+        role: "system",
+        content: `Error executing ${actionName}: ${error instanceof Error ? error.message : "Unknown error"}`,
+      }
+
+      setMessages((prev) => [...prev, errorMessage])
+    }
   }
 
   return {
@@ -290,5 +346,8 @@ export function useChatSimulation() {
     setEditedMessageContent,
     handleEditSuggestedMessage,
     handleCancelEdit,
+    handleExecuteTool,
+    useMockData,
+    toggleMockData,
   }
 }

@@ -1,3 +1,5 @@
+"use client"
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -7,9 +9,10 @@ import { CUSTOMER_DETAILS, USER_INFO, type Action } from "@/types/chat"
 interface CustomerInfoProps {
   useSimTheme?: boolean
   recommendedActions?: Action[]
+  onExecuteTool?: (actionName: string, parameters: any) => void
 }
 
-export function CustomerInfo({ useSimTheme = false, recommendedActions = [] }: CustomerInfoProps) {
+export function CustomerInfo({ useSimTheme = false, recommendedActions = [], onExecuteTool }: CustomerInfoProps) {
   // 기본 액션
   const customerActions = [
     {
@@ -61,6 +64,13 @@ export function CustomerInfo({ useSimTheme = false, recommendedActions = [] }: C
   const buttonClass = useSimTheme
     ? "flex items-center gap-2 h-auto py-3 justify-start border sim-button-secondary"
     : "flex items-center gap-2 h-auto py-3 justify-start border"
+
+  // Handle tool execution
+  const handleToolExecution = (action: Action) => {
+    if (onExecuteTool) {
+      onExecuteTool(action.name, action.parameters)
+    }
+  }
 
   return (
     <>
@@ -128,7 +138,8 @@ export function CustomerInfo({ useSimTheme = false, recommendedActions = [] }: C
               <Button
                 key={`recommended-${index}`}
                 variant="outline"
-                className="flex items-center gap-2 h-auto py-3 justify-start border bg-yellow-50 text-yellow-700 border-yellow-300"
+                className="flex items-center gap-2 h-auto py-3 justify-start border bg-yellow-50 text-yellow-700 border-yellow-300 hover:bg-yellow-100"
+                onClick={() => handleToolExecution(action)}
               >
                 <AlertTriangle className="h-4 w-4" />
                 <span>{action.name}</span>

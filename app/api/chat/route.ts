@@ -1,5 +1,35 @@
 import type { NextRequest } from "next/server"
 import { GoogleGenAI } from "@google/genai"
+import { streamText } from "ai"
+import { openai } from "@ai-sdk/openai"
+import { getOpenAITools } from "@/lib/tools/tools"
+import { z } from "zod"
+import { getMockResponseByUserMessage } from "@/lib/mock/mock-gemini-responses"
+
+// 스트림 파트 타입 정의
+type LanguageModelV1StreamPart =
+  | { type: "text"; text: string }
+  | { type: "tool_call"; toolCall: any }
+  | { type: "metadata"; metadata: any }
+  | { type: "error"; error: string }
+
+// 응답 청크 스키마 정의
+const openaiResponsesChunkSchema = z.object({
+  text: z.string().optional(),
+  toolCall: z.any().optional(),
+  finishReason: z.string().optional(),
+  usage: z
+    .object({
+      promptTokens: z.number().optional(),
+      completionTokens: z.number().optional(),
+      totalTokens: z.number().optional(),
+    })
+    .optional(),
+  error: z.string().optional(),
+})
+
+// ParseResult 타입 정의
+type ParseResult<T> = { success: true; data: T } | { success: false; error: Error }
 
 // Initialize Google Generative AI client
 const ai = new GoogleGenAI({
@@ -7,19 +37,13 @@ const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY || "",
 })
 
+export const runtime = "nodejs"
+
 export async function POST(request: NextRequest) {
   try {
-    // Check if API key is configured
-    if (!process.env.GEMINI_API_KEY) {
-      return new Response(JSON.stringify({ error: "GEMINI_API_KEY is not configured" }), {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      })
-    }
-
     // Parse the request body
     const body = await request.json()
-    const { messages, cacheName } = body
+    const { messages, cacheName, useMockData } = body
 
     if (!messages || !Array.isArray(messages)) {
       return new Response(JSON.stringify({ error: "No messages provided or invalid format" }), {
@@ -40,116 +64,207 @@ export async function POST(request: NextRequest) {
 
     console.log(`Processing chat request with message: "${lastUserMessage.content.substring(0, 50)}..."`)
 
-    // Prepare the system prompt
-    const systemPrompt = `
-      당신은 전자제품 쇼핑몰의 고객 서비스 담당자입니다.
-      고객의 문의에 친절하고 전문적으로 응답해주세요.
-      배송, 환불, 교환, 취소 등의 문의에 적절히 대응하세요.
-      고객의 정보를 확인하고 맞춤형 응답을 제공하세요.
-    `
+    // 모의 데이터 사용 여부 확인
+    let geminiText = ""
 
-    // Convert messages to Google Generative AI format
-    const formattedMessages = messages.map((m: any) => ({
-      role: m.role,
-      parts: [{ text: m.content }],
-    }))
+    if (useMockData) {
+      // 모의 데이터 사용
+      console.log("Using mock Gemini response")
+      geminiText = getMockResponseByUserMessage(lastUserMessage.content)
+    } else {
+      // 실제 Gemini API 사용
+      // API 키가 없으면 에러 반환
+      if (!process.env.GEMINI_API_KEY) {
+        return new Response(JSON.stringify({ error: "GEMINI_API_KEY is not configured" }), {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
 
-    // Add system prompt if not already present
-    // if (!formattedMessages.some((m: any) => m.role === "system")) {
-    //   formattedMessages.unshift({
-    //     role: "system",
-    //     parts: [{ text: systemPrompt }],
-    //   })
-    // }
+      // Convert messages to Google Generative AI format
+      const formattedMessages = messages.map((m: any) => ({
+        role: m.role,
+        parts: [{ text: m.content }],
+      }))
 
-    // Generate streaming content
-    const responseGenerator = await ai.models.generateContentStream({
-      model: "gemini-2.0-flash-001",
-      contents: formattedMessages,
-      config: cacheName ? { cachedContent: cacheName } : undefined,
-    })
+      // Use non-streaming generateContent instead of generateContentStream
+      const geminiResponse = await ai.models.generateContent({
+        model: "gemini-2.0-flash-001",
+        contents: formattedMessages,
+        config: cacheName ? { cachedContent: cacheName } : undefined,
+      })
 
-    // Create a ReadableStream from the AsyncGenerator
-    const stream = new ReadableStream({
-      async start(controller) {
-        // Store metadata for the final chunk
-        let finalCandidate = null
-        let finalUsageMetadata = null
-        let accumulatedText = ""
+      // Extract the text from the Gemini response
+      if (geminiResponse.candidates?.[0]?.content?.parts?.[0]?.text) {
+        geminiText = geminiResponse.candidates[0].content.parts[0].text
+      }
+    }
 
-        try {
-          // Iterate through the AsyncGenerator
-          for await (const chunk of responseGenerator) {
-            // Store the candidate for the final chunk
-            if (chunk.candidates?.[0]) {
-              finalCandidate = chunk.candidates[0]
+    console.log("Gemini response received, length:", geminiText.length)
+    console.log("Gemini response received:", geminiText)
+    // If we have a Gemini response, process it with OpenAI
+    if (geminiText) {
+      // Convert messages to OpenAI format
+      const openaiMessages = messages.map((m: any) => ({
+        role: m.role,
+        content: m.content,
+      }))
+
+      // Add the Gemini response as a system message
+      openaiMessages.push({
+        role: "system",
+        content: `The primary AI suggested the following response: "${geminiText}". 
+        If this response indicates a need to use tools, please use the appropriate tool.
+        Otherwise, you can suggest a response for the human representative to send.`,
+      })
+
+      // Get OpenAI tools
+      const tools = getOpenAITools()
+
+      console.log("OpenAI tools:", tools)
+      console.log("OpenAI messages:", openaiMessages)
+      
+      // Create a stream from OpenAI
+      const stream = await streamText({
+        model: openai("gpt-4o-mini"),
+        messages: openaiMessages,
+        tools: tools,
+        toolChoice: "auto",
+        temperature: 0.7,
+      })
+
+      // 스트림 소스 생성
+      const streamSource = new ReadableStream<ParseResult<z.infer<typeof openaiResponsesChunkSchema>>>({
+        async start(controller) {
+          try {
+            // 텍스트 스트림 처리
+            for await (const chunk of stream.textStream) {
+              controller.enqueue({
+                success: true,
+                data: { text: chunk },
+              })
             }
 
-            // Store usage metadata if available
-            if (chunk.usageMetadata) {
-              finalUsageMetadata = chunk.usageMetadata
+            // 도구 호출 처리 - await로 Promise 해결
+            const toolCalls = await stream.toolCalls
+            if (toolCalls && toolCalls.length > 0) {
+              for (const toolCall of toolCalls) {
+                controller.enqueue({
+                  success: true,
+                  data: { toolCall },
+                })
+              }
             }
 
-            // Extract text from the chunk
-            let text = ""
-            if (chunk.candidates?.[0]?.content?.parts?.[0]?.text) {
-              text = chunk.candidates[0].content.parts[0].text
-            }
-
-            // Accumulate text for the suggested message
-            accumulatedText += text
-
-            // Only send non-empty text chunks
-            if (text) {
-              const jsonChunk = JSON.stringify({ text }) + "\n"
-              controller.enqueue(new TextEncoder().encode(jsonChunk))
-            }
-          }
-
-          // Extract usage metadata including cachedContentTokenCount
-          const usage = {
-            promptTokenCount: finalUsageMetadata?.promptTokenCount,
-            candidatesTokenCount: finalUsageMetadata?.candidatesTokenCount,
-            totalTokenCount: finalUsageMetadata?.totalTokenCount,
-            cachedContentTokenCount: finalUsageMetadata?.cachedContentTokenCount || 0,
-          }
-
-          // Log the final usage metadata
-          console.log("Stream completed. Usage metadata:", usage)
-
-          // After all chunks are processed, send the finish reason and metadata
-          const finalChunk =
-            JSON.stringify({
-              finishReason: finalCandidate?.finishReason || "STOP",
-              completionMetadata: {
-                finishReason: finalCandidate?.finishReason || "STOP",
-                usage,
-                safetyRatings: finalCandidate?.safetyRatings,
+            // 완료 메타데이터 전송
+            controller.enqueue({
+              success: true,
+              data: {
+                finishReason: await stream.finishReason,
+                usage: await stream.usage,
               },
-            }) + "\n"
+            })
 
-          controller.enqueue(new TextEncoder().encode(finalChunk))
-          controller.close()
-        } catch (error) {
-          console.error("Error processing stream:", error)
-          controller.enqueue(
-            new TextEncoder().encode(
-              JSON.stringify({ error: "Error processing stream", finishReason: "ERROR" }) + "\n",
-            ),
-          )
-          controller.close()
-        }
-      },
-    })
+            // 스트림 종료
+            controller.close()
+          } catch (error) {
+            console.error("Error in stream processing:", error)
+            controller.enqueue({
+              success: false,
+              error: error instanceof Error ? error : new Error("Unknown error"),
+            })
+            controller.close()
+          }
+        },
+      })
 
-    // Return the stream as a response
-    return new Response(stream, {
-      headers: {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
-        Connection: "keep-alive",
-      },
-    })
+      // TransformStream을 사용하여 스트림 변환
+      const transformedStream = streamSource.pipeThrough(
+        new TransformStream<ParseResult<z.infer<typeof openaiResponsesChunkSchema>>, LanguageModelV1StreamPart>({
+          transform(chunk, controller) {
+            if (!chunk.success) {
+              controller.enqueue({
+                type: "error",
+                error: chunk.error.message,
+              })
+              return
+            }
+
+            const data = chunk.data
+
+            // 텍스트 청크 처리
+            if (data.text) {
+              controller.enqueue({
+                type: "text",
+                text: data.text,
+              })
+            }
+
+            // 도구 호출 처리
+            if (data.toolCall) {
+              controller.enqueue({
+                type: "tool_call",
+                toolCall: data.toolCall,
+              })
+            }
+
+            // 메타데이터 처리
+            if (data.finishReason) {
+              controller.enqueue({
+                type: "metadata",
+                metadata: {
+                  finishReason: data.finishReason,
+                  usage: data.usage,
+                },
+              })
+            }
+          },
+        }),
+      )
+
+      // 최종 스트림을 텍스트 인코딩하여 클라이언트에 전송
+      const encodedStream = transformedStream.pipeThrough(
+        new TransformStream<LanguageModelV1StreamPart, Uint8Array>({
+          transform(part, controller) {
+            let chunk: string
+
+            switch (part.type) {
+              case "text":
+                chunk = JSON.stringify({ text: part.text })
+                break
+              case "tool_call":
+                chunk = JSON.stringify({ toolCall: part.toolCall })
+                break
+              case "metadata":
+                chunk = JSON.stringify(part.metadata)
+                break
+              case "error":
+                chunk = JSON.stringify({ error: part.error })
+                break
+              default:
+                return
+            }
+
+            controller.enqueue(new TextEncoder().encode(chunk + "\n"))
+          },
+        }),
+      )
+
+      // 응답 반환
+      return new Response(encodedStream, {
+        headers: {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          Connection: "keep-alive",
+        },
+      })
+    } else {
+      // If no Gemini response, return an error
+      return new Response(JSON.stringify({ error: "No response from Gemini" }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      })
+    }
   } catch (error) {
     console.error("Error in chat API:", error)
 

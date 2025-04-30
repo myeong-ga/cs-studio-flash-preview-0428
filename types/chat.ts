@@ -28,6 +28,15 @@ export interface Action {
   parameters: any
 }
 
+export interface ToolCall {
+  id: string
+  type: "function"
+  function: {
+    name: string
+    arguments: string
+  }
+}
+
 export const CUSTOMER_DETAILS = {
   name: "김고객",
   id: "cus_28X44",

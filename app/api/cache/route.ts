@@ -121,7 +121,7 @@ async function createCache(fileIds: string[]) {
   // Return the cache name
   return {
     cacheName: cache.name,
-    ttlSeconds: 300, // Default TTL is 5 minutes
+    ttlSeconds: 3600, // Default TTL is 1 hour
     message: "Cache created successfully",
   }
 }

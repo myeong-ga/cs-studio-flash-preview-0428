@@ -9,20 +9,26 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Loader2, RefreshCw, CheckCircle, AlertCircle, Info } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
+// 1. useCacheValidation 훅 import 추가
+import { useCacheValidation } from "@/hooks/use-cache-validation"
 
+// 3. 수정된 코드로 변경
 export default function FileUploadPage() {
   const { files, uploadComplete, cache, setCacheCreated, setCacheValidated, resetCache } = useStore()
   const [isCreatingCache, setIsCreatingCache] = useState(false)
-  const [isValidatingCache, setIsValidatingCache] = useState(false)
   const [cacheError, setCacheError] = useState<string | null>(null)
   const { toast } = useToast()
 
-  // Validate cache on component mount if cache exists
+  // useCacheValidation 훅 사용 - 자동 검증 활성화 (기본값)
+  const { isValidating: isValidatingCache, validateCache } = useCacheValidation()
+
+  // 컴포넌트 마운트 시 캐시 검증 - 리디렉션 없이 검증만 수행
   useEffect(() => {
     if (cache.isCreated && cache.cacheName) {
-      validateCache()
+      // 리디렉션 없이 캐시 검증만 수행 (true 전달)
+      validateCache(true)
     }
-  }, [])
+  }, [cache.isCreated, cache.cacheName, validateCache])
 
   const handleUploadStart = () => {
     // Reset cache when starting a new upload
@@ -110,7 +116,8 @@ export default function FileUploadPage() {
     }
   }
 
-  const validateCache = async () => {
+  // 버튼 클릭 시 캐시 검증 처리 함수
+  const handleValidateCache = () => {
     if (!cache.cacheName) {
       toast({
         title: "No cache to validate",
@@ -120,54 +127,14 @@ export default function FileUploadPage() {
       return
     }
 
-    setIsValidatingCache(true)
-    // 검증 시작 시 에러 상태 초기화
+    // 에러 상태 초기화
     setCacheError(null)
 
-    try {
-      // Validate cache
-      const response = await fetch("/api/cache/validate", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          cacheName: cache.cacheName,
-        }),
-      })
-
-      const result = await response.json()
-
-      if (response.ok && result.valid) {
-        setCacheValidated(Date.now())
-        toast({
-          title: "Cache validated",
-          description: "The cache is valid and ready to use.",
-        })
-      } else {
-        resetCache()
-        // 캐시 검증 실패 시 에러 메시지 설정
-        setCacheError(result.error || "Cache is no longer valid")
-        toast({
-          title: "Cache invalid",
-          description: "The cache is no longer valid. Please create a new cache.",
-          variant: "destructive",
-        })
-      }
-    } catch (error) {
-      console.error("Error validating cache:", error)
-      // 에러 메시지 설정
-      setCacheError(error instanceof Error ? error.message : "An unknown error occurred while validating the cache")
-      toast({
-        title: "Error",
-        description: "An error occurred while validating the cache.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsValidatingCache(false)
-    }
+    // 리디렉션 없이 캐시 검증만 수행 (true 전달)
+    validateCache(true)
   }
 
+  // 버튼 클릭 핸들러 수정
   return (
     <div className="flex flex-col gap-6 sm:gap-8 md:gap-10 lg:gap-12 py-6 md:max-w-3xl">
       <DashboardHeader title="파일 업로드" description="CS 시뮬레이션에 사용할 파일 업로드" />
@@ -238,7 +205,7 @@ export default function FileUploadPage() {
 
                 {cache.isCreated && (
                   <Button
-                    onClick={validateCache}
+                    onClick={handleValidateCache}
                     disabled={isValidatingCache || !cache.cacheName}
                     variant="outline"
                     className="border-microsoft-blue-light text-microsoft-blue hover:bg-microsoft-blue-lighter"
