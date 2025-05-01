@@ -110,14 +110,18 @@
   }
 }
 
+/* Update the microsoft-scrollbar class to ensure scrollbars are always visible */
 .microsoft-scrollbar {
   scrollbar-width: thin;
   scrollbar-color: #c7c7c7 transparent;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .microsoft-scrollbar::-webkit-scrollbar {
   width: 8px;
   height: 8px;
+  display: block;
 }
 
 .microsoft-scrollbar::-webkit-scrollbar-track {
@@ -148,7 +152,6 @@
   box-shadow: 0 1.6px 3.6px 0 rgba(0, 0, 0, 0.132), 0 0.3px 0.9px 0 rgba(0, 0, 0, 0.108);
 }
 
-
 /* Simulation theme specific styles */
 .simulation-theme .sim-card {
   background-color: var(--sim-card);
@@ -159,6 +162,7 @@
 .simulation-theme .sim-header {
   background-color: var(--sim-primary);
   color: var(--sim-primary-foreground);
+  z-index: 10;
 }
 
 .simulation-theme .sim-button {

@@ -7,11 +7,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-// Edit 아이콘 import 추가
 import { Loader2, Send, CheckCircle, Edit } from "lucide-react"
 import type { Message, SuggestedMessage } from "@/types/chat"
 
-// props에 새로운 속성들 추가
 interface OperatorChatProps {
   messages: Message[]
   input: string
@@ -28,7 +26,6 @@ interface OperatorChatProps {
   handleCancelEdit?: () => void
 }
 
-// 새로운 props 구조 분해 할당에 추가
 export function OperatorChat({
   messages,
   input,
@@ -45,6 +42,21 @@ export function OperatorChat({
   handleCancelEdit = () => {},
 }: OperatorChatProps) {
   const prevSuggestedMessageRef = useRef<SuggestedMessage | null>(null)
+  // Add ref for the message container
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const suggestedMessageRef = useRef<HTMLDivElement>(null)
+
+  // Add auto-scroll effect when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }, [messages])
+
+  // Add auto-scroll effect when suggested message changes
+  useEffect(() => {
+    if (suggestedMessage) {
+      suggestedMessageRef.current?.scrollIntoView({ behavior: "smooth" })
+    }
+  }, [suggestedMessage])
 
   // suggestedMessage 변경 시 로그 출력
   useEffect(() => {
@@ -76,8 +88,8 @@ export function OperatorChat({
   }, [messages])
 
   const cardClass = useSimTheme
-    ? "h-full flex flex-col sim-card border-t-0 rounded-t-none"
-    : "h-full flex flex-col microsoft-card border-t-0 rounded-t-none"
+    ? "h-full flex flex-col sim-card rounded-none"
+    : "h-full flex flex-col microsoft-card rounded-none"
 
   const messageUserClass = useSimTheme ? "sim-message-user" : "bg-microsoft-blue-lighter text-gray-800"
 
@@ -100,7 +112,7 @@ export function OperatorChat({
 
   return (
     <Card className={cardClass}>
-      <CardContent className="flex-1 overflow-auto p-4 space-y-4 microsoft-scrollbar">
+      <CardContent className="flex-1 overflow-y-auto p-4 space-y-4 microsoft-scrollbar min-h-0 h-[calc(100%-4rem)]">
         {messages.map((message, index) => (
           <div
             key={index}
@@ -127,10 +139,12 @@ export function OperatorChat({
             )}
           </div>
         ))}
+        {/* Add ref element for auto-scrolling messages */}
+        <div ref={messagesEndRef} />
 
         {/* 제안된 메시지 표시 */}
         {suggestedMessage && (
-          <div className="flex flex-col gap-2 items-end">
+          <div className="flex flex-col gap-2 items-end" ref={suggestedMessageRef}>
             <div className={suggestedMessageClass}>
               <div className="flex items-center gap-2 mb-1">
                 <span className="text-xs font-medium text-amber-600">AI 제안 메시지</span>
@@ -194,7 +208,7 @@ export function OperatorChat({
           </div>
         )}
       </CardContent>
-      <CardFooter className="border-t p-4">
+      <CardFooter className="border-t p-4 flex-shrink-0 sticky bottom-0 bg-background">
         <form onSubmit={handleSubmit} className="flex w-full gap-2">
           <Input
             placeholder="메시지를 입력하세요..."

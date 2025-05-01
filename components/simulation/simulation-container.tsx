@@ -50,7 +50,7 @@ export function SimulationContainer({
         setInput={chatSimulation.setCustomerInput}
         handleSubmit={chatSimulation.handleCustomerSubmit}
         isLoading={chatSimulation.isLoading}
-        useSimTheme={true}
+        useSimTheme={false}
       />
     ),
     [
@@ -73,7 +73,7 @@ export function SimulationContainer({
         isLoading={chatSimulation.isLoading}
         suggestedMessage={chatSimulation.suggestedMessage}
         handleSendSuggestedMessage={chatSimulation.handleSendSuggestedMessage}
-        useSimTheme={true}
+        useSimTheme={false}
         isEditingMessage={chatSimulation.isEditingMessage}
         editedMessageContent={chatSimulation.editedMessageContent}
         setEditedMessageContent={chatSimulation.setEditedMessageContent}
@@ -123,30 +123,30 @@ export function SimulationContainer({
   }
 
   return (
-    <div className="min-w-[1440px] overflow-auto font-geist-mono simulation-theme">
+    <div className="w-full h-[calc(100vh-12rem)] overflow-auto font-geist-mono simulation-theme flex flex-col">
       {/* Mock data toggle switch - memoized */}
-      {mockDataToggle}
+      <div className="flex-shrink-0">{mockDataToggle}</div>
 
-      <div className="grid grid-cols-4 gap-6 h-[calc(100vh-12rem)]">
-        {/* Customer View - 1/4 width */}
-        <div className="flex flex-col">
-          <div className="sim-header py-2 px-4 mb-4 rounded-t-md">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 flex-1 min-h-0">
+        {/* Customer View - 1/4 width on large screens, full width on small screens */}
+        <div className="flex flex-col h-full">
+          <div className="sim-header py-2 px-4 rounded-t-md flex-shrink-0 sticky top-0 z-10">
             <h2 className="text-center font-medium">고객 화면</h2>
           </div>
-          <div className="flex-1 overflow-hidden">{customerChatComponent}</div>
+          <div className="flex-1 min-h-0 overflow-auto flex flex-col">{customerChatComponent}</div>
         </div>
 
-        {/* Representative View - 3/4 width */}
-        <div className="col-span-3 flex flex-col">
-          <div className="sim-header py-2 px-4 mb-4 rounded-t-md">
+        {/* Representative View - 3/4 width on large screens, full width on small screens */}
+        <div className="lg:col-span-3 flex flex-col h-full">
+          <div className="sim-header py-2 px-4 rounded-t-md flex-shrink-0 sticky top-0 z-10">
             <h2 className="text-center font-medium">상담사 화면</h2>
           </div>
-          <div className="grid grid-cols-5 gap-4 h-full">
-            {/* Chat Area - 3/5 width */}
-            <div className="col-span-3 overflow-hidden">{operatorChatComponent}</div>
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 h-full min-h-0">
+            {/* Chat Area - 3/5 width on large screens, full width on small screens */}
+            <div className="lg:col-span-3 h-full min-h-0 overflow-auto flex flex-col">{operatorChatComponent}</div>
 
-            {/* Customer Info Area - 2/5 width */}
-            <div className="col-span-2 overflow-auto">{customerInfoComponent}</div>
+            {/* Customer Info Area - 2/5 width on large screens, full width on small screens */}
+            <div className="lg:col-span-2 h-full min-h-0 overflow-auto">{customerInfoComponent}</div>
           </div>
         </div>
       </div>

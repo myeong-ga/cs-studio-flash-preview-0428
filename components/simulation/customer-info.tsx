@@ -73,7 +73,7 @@ export function CustomerInfo({ useSimTheme = false, recommendedActions = [], onE
   }
 
   return (
-    <>
+    <div className="h-full flex flex-col overflow-auto">
       <Card className={cardClass}>
         <CardHeader className={headerClass}>
           <CardTitle className={titleClass}>고객 정보</CardTitle>
@@ -116,11 +116,11 @@ export function CustomerInfo({ useSimTheme = false, recommendedActions = [], onE
         </CardContent>
       </Card>
 
-      <Card className={cardClass.replace("mb-4", "")}>
+      <Card className={`${cardClass.replace("mb-4", "")} flex-1`}>
         <CardHeader className={headerClass}>
           <CardTitle className={titleClass}>상담 액션</CardTitle>
         </CardHeader>
-        <CardContent className="pt-4">
+        <CardContent className="pt-4 overflow-auto">
           <div className="grid grid-cols-2 gap-2">
             {customerActions.map((action) => (
               <Button
@@ -148,6 +148,6 @@ export function CustomerInfo({ useSimTheme = false, recommendedActions = [], onE
           </div>
         </CardContent>
       </Card>
-    </>
+    </div>
   )
 }

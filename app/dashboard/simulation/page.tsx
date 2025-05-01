@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { useCacheValidation } from "@/hooks/use-cache-validation"
 import { useChatSimulation } from "@/hooks/use-chat-simulation"
 
+// Update the SimulationPage component to ensure proper height and responsiveness
 export default function SimulationPage() {
   const { cache } = useStore()
   const [showAlert, setShowAlert] = useState(false)
@@ -65,35 +66,37 @@ export default function SimulationPage() {
   const isLoading = (isValidating || isInitializing) && !bypassCacheCheck
 
   return (
-    <div className="flex flex-col gap-6 md:gap-0 py-6 overflow-auto">
-      <DashboardHeader title="CS 시뮬레이션" description="Gemini AI를 활용한 고객 서비스 시뮬레이션" />
+    <div className="flex flex-col h-[calc(100vh-4rem)] overflow-hidden">
+      <div className="flex-shrink-0">
+        <DashboardHeader title="CS 시뮬레이션" description="Gemini AI를 활용한 고객 서비스 시뮬레이션" />
 
-      {showAlert && (
-        <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-md mb-4">
-          <div className="flex items-start">
-            <AlertCircle className="h-5 w-5 text-amber-500 mt-0.5 mr-2" />
-            <div>
-              <h3 className="font-medium text-amber-800">캐시가 필요합니다</h3>
-              <p className="text-amber-700 text-sm mt-1">
-                채팅 시뮬레이션을 사용하려면 먼저 파일을 업로드하고 캐시를 생성해야 합니다. 파일 업로드 페이지로
-                이동합니다...
-              </p>
-              <div className="mt-2">
-                <Button
-                  onClick={handleBypassCacheCheck}
-                  variant="outline"
-                  size="sm"
-                  className="bg-amber-100 text-amber-800 border-amber-300 hover:bg-amber-200"
-                >
-                  모의 데이터로 계속하기
-                </Button>
+        {showAlert && (
+          <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-md mb-4">
+            <div className="flex items-start">
+              <AlertCircle className="h-5 w-5 text-amber-500 mt-0.5 mr-2" />
+              <div>
+                <h3 className="font-medium text-amber-800">캐시가 필요합니다</h3>
+                <p className="text-amber-700 text-sm mt-1">
+                  채팅 시뮬레이션을 사용하려면 먼저 파일을 업로드하고 캐시를 생성해야 합니다. 파일 업로드 페이지로
+                  이동합니다...
+                </p>
+                <div className="mt-2">
+                  <Button
+                    onClick={handleBypassCacheCheck}
+                    variant="outline"
+                    size="sm"
+                    className="bg-amber-100 text-amber-800 border-amber-300 hover:bg-amber-200"
+                  >
+                    모의 데이터로 계속하기
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
-      <div className="overflow-auto">
+      <div className="flex-1 min-h-0 overflow-hidden">
         {(!showAlert || bypassCacheCheck) && (
           <SimulationContainer
             bypassCacheCheck={bypassCacheCheck}

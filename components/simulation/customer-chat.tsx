@@ -1,6 +1,7 @@
 "use client"
 
 import type React from "react"
+import { useRef, useEffect } from "react"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -26,9 +27,17 @@ export function CustomerChat({
   isLoading,
   useSimTheme = false,
 }: CustomerChatProps) {
+  // Add ref for the message container
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  // Add auto-scroll effect when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }, [messages])
+
   const cardClass = useSimTheme
-    ? "h-full flex flex-col sim-card border-t-0 rounded-t-none"
-    : "h-full flex flex-col microsoft-card border-t-0 rounded-t-none"
+    ? "h-full flex flex-col sim-card rounded-none"
+    : "h-full flex flex-col microsoft-card rounded-none"
 
   const messageUserClass = useSimTheme ? "sim-message-user" : "bg-microsoft-blue text-white"
 
@@ -42,7 +51,7 @@ export function CustomerChat({
 
   return (
     <Card className={cardClass}>
-      <CardContent className="flex-1 overflow-auto p-4 space-y-4 microsoft-scrollbar">
+      <CardContent className="flex-1 overflow-y-auto p-4 space-y-4 microsoft-scrollbar min-h-0 h-[calc(100%-4rem)]">
         {messages.map((message, index) => (
           <div
             key={index}
@@ -69,8 +78,10 @@ export function CustomerChat({
             )}
           </div>
         ))}
+        {/* Add ref element for auto-scrolling */}
+        <div ref={messagesEndRef} />
       </CardContent>
-      <CardFooter className="border-t p-4">
+      <CardFooter className="border-t p-4 flex-shrink-0 sticky bottom-0 bg-background">
         <form onSubmit={handleSubmit} className="flex w-full gap-2">
           <Input
             placeholder="메시지를 입력하세요..."

@@ -132,6 +132,7 @@ export function useChatSimulation() {
             console.log("[HOOK] Successfully parsed JSON:", parsedData)
 
             if (parsedData.text) {
+              console.log("[HOOK] text received:", parsedData.text)
               messageContent += parsedData.text
 
               setSuggestedMessage({
@@ -149,11 +150,11 @@ export function useChatSimulation() {
               const toolCall = parsedData.toolCall
               toolCalls.push(toolCall)
 
-              if (requiresConfirmation(toolCall.function.name)) {
+              if (requiresConfirmation(toolCall.toolName.name)) {
                 try {
-                  const parsedArgs = JSON.parse(toolCall.function.arguments)
+                  const parsedArgs = JSON.parse(toolCall.args)
                   const action: Action = {
-                    name: toolCall.function.name,
+                    name: toolCall.toolName.name,
                     parameters: parsedArgs,
                   }
 
