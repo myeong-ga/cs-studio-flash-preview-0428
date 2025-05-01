@@ -7,14 +7,12 @@ import { z } from "zod"
 import { getMockResponseByUserMessage } from "@/lib/mock/mock-gemini-responses"
 import { NoSuchToolError, InvalidToolArgumentsError, ToolExecutionError } from "ai"
 
-// Stream part type definition
 type LanguageModelV1StreamPart =
   | { type: "text"; text: string }
   | { type: "tool_call"; toolCall: any }
   | { type: "metadata"; metadata: any }
   | { type: "error"; error: string }
 
-// Response chunk schema definition
 const openaiResponsesChunkSchema = z.object({
   text: z.string().optional(),
   toolCall: z.any().optional(),
@@ -29,10 +27,13 @@ const openaiResponsesChunkSchema = z.object({
   error: z.string().optional(),
 })
 
-// ParseResult type definition
+const sessionInfoSchema = z.object({
+  userId: z.string(),
+  sessionId: z.string().optional(),
+})
+
 type ParseResult<T> = { success: true; data: T } | { success: false; error: Error }
 
-// Initialize Google Generative AI client
 const ai = new GoogleGenAI({
   vertexai: false,
   apiKey: process.env.GEMINI_API_KEY || "",
@@ -40,10 +41,8 @@ const ai = new GoogleGenAI({
 
 export const runtime = "nodejs"
 
-// API request timeout in milliseconds (30 seconds)
 const API_TIMEOUT = 30000
 
-// Create a promise with timeout
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number, errorMessage: string): Promise<T> {
   return Promise.race([
     promise,
@@ -58,14 +57,17 @@ export async function POST(request: NextRequest) {
   const startTime = Date.now()
 
   try {
-    // Parse the request body
     const body = await request.json()
-    const { messages, cacheName, useMockData } = body
+    const { messages, cacheName, useMockData, sessionInfo } = body
+
+    const validatedSessionInfo = sessionInfo ? sessionInfoSchema.parse(sessionInfo) : { userId: "cus_28X44" }
+    const userId = validatedSessionInfo.userId
 
     console.log("[API] Request parsed:", {
       messageCount: messages?.length,
       cacheName: cacheName || "none",
       useMockData: !!useMockData,
+      userId,
     })
 
     if (!messages || !Array.isArray(messages)) {
@@ -76,7 +78,6 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Extract the last user message
     const lastUserMessage = messages.filter((m: any) => m.role === "user").pop()
 
     if (!lastUserMessage) {
@@ -89,17 +90,13 @@ export async function POST(request: NextRequest) {
 
     console.log(`[API] Processing chat request with message: "${lastUserMessage.content.substring(0, 50)}..."`)
 
-    // Check if using mock data
     let geminiText = ""
 
     if (useMockData) {
-      // Use mock data
       console.log("[API] Using mock Gemini response")
       geminiText = getMockResponseByUserMessage(lastUserMessage.content)
       console.log("[API] Mock response generated, length:", geminiText.length)
     } else {
-      // Use actual Gemini API
-      // Check for API key
       if (!process.env.GEMINI_API_KEY) {
         console.error("[API] GEMINI_API_KEY is not configured")
         return new Response(JSON.stringify({ error: "GEMINI_API_KEY is not configured" }), {
@@ -108,7 +105,6 @@ export async function POST(request: NextRequest) {
         })
       }
 
-      // Convert messages to Google Generative AI format
       const formattedMessages = messages.map((m: any) => ({
         role: m.role,
         parts: [{ text: m.content }],
@@ -116,7 +112,6 @@ export async function POST(request: NextRequest) {
 
       console.log("[API] Calling Gemini API...")
       try {
-        // Use non-streaming generateContent with timeout
         const geminiResponse = await withTimeout(
           ai.models.generateContent({
             model: "gemini-2.0-flash-001",
@@ -129,7 +124,6 @@ export async function POST(request: NextRequest) {
 
         console.log("[API] Gemini API response received")
 
-        // Extract the text from the Gemini response
         if (geminiResponse.candidates?.[0]?.content?.parts?.[0]?.text) {
           geminiText = geminiResponse.candidates[0].content.parts[0].text
           console.log("[API] Extracted text from Gemini response, length:", geminiText.length)
@@ -148,46 +142,67 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // If we have a Gemini response, process it with OpenAI
     if (geminiText) {
-      // Convert messages to OpenAI format
-      const openaiMessages = messages.map((m: any) => ({
-        role: m.role,
-        content: m.content,
-      }))
+      const filteredMessages = messages.filter((m: any) => m.role !== "function")
 
-      // Add the Gemini response as a system message
+      const openaiMessages = filteredMessages.map((m: any) => {
+        const baseMessage: any = {
+          role: m.role,
+          content: m.content,
+        }
+
+        if (m.functionCall) {
+          baseMessage.function_call = {
+            name: m.functionCall.name,
+            arguments: m.functionCall.arguments,
+          }
+        }
+
+        return baseMessage
+      })
+
       openaiMessages.push({
         role: "system",
         content: `The primary AI suggested the following response: "${geminiText}". 
-        If this response indicates a need to use tools, please use the appropriate tool.
-        Otherwise, you can suggest a response for the human representative to send.`,
+If this response indicates a need to use tools, please use the appropriate tool.
+When you receive function results, incorporate them into your response.
+For order details, format the information in a clear, readable way.
+For order history, summarize the key information about each order.
+The current user ID is ${userId}. Use this ID when calling functions that require a user ID.
+Otherwise, you can suggest a response for the human representative to send.`,
       })
 
       console.log("[API] OpenAI messages prepared:", JSON.stringify(openaiMessages))
 
-      // Get OpenAI tools
       const tools = getOpenAITools()
       console.log("[API] OpenAI tools prepared:", tools.length, "tools available")
 
       try {
         console.log("[API] Calling OpenAI API...")
 
-        // Setup AbortController for timeout
+        let systemMessage = ""
+        const regularMessages = openaiMessages.filter((msg) => {
+          if (msg.role === "system") {
+            systemMessage += (systemMessage ? "\n" : "") + msg.content
+            return false
+          }
+          return true
+        })
+
         const controller = new AbortController()
         const timeoutId = setTimeout(() => {
           controller.abort()
           console.error("[API] OpenAI request timed out after", API_TIMEOUT, "ms")
         }, API_TIMEOUT)
 
-        // Create a stream from OpenAI with error handling
         const stream = streamText({
-          model: openai("gpt-4o-mini"),
-          messages: openaiMessages,
+          model: openai("gpt-4.1-mini"),
+          messages: regularMessages,
+          system: systemMessage,
           tools: tools,
-          maxSteps: 10,
           toolChoice: "auto",
           temperature: 0.7,
+          maxSteps: 10,
           abortSignal: controller.signal,
           onError: (error) => {
             console.error("[API] OpenAI stream error:", error)
@@ -206,17 +221,14 @@ export async function POST(request: NextRequest) {
           },
         })
 
-        // Clear timeout as request succeeded
         clearTimeout(timeoutId)
 
         console.log("[API] OpenAI stream created successfully")
 
-        // Create stream source
         const streamSource = new ReadableStream<ParseResult<z.infer<typeof openaiResponsesChunkSchema>>>({
           async start(controller) {
             try {
               console.log("[API] Starting to process text stream")
-              // Process text stream
               for await (const chunk of stream.textStream) {
                 console.log("[API] Text chunk received:", chunk.substring(0, 50))
                 controller.enqueue({
@@ -226,11 +238,24 @@ export async function POST(request: NextRequest) {
               }
               console.log("[API] Text stream completed")
 
-              // Process tool calls
               const toolCalls = await stream.toolCalls
               if (toolCalls && toolCalls.length > 0) {
                 console.log("[API] Tool calls received:", toolCalls.length)
                 for (const toolCall of toolCalls) {
+                  if (
+                    toolCall.args &&
+                    !toolCall.args.user_id &&
+                    (toolCall.toolName === "get_order_history" ||
+                      toolCall.toolName === "reset_password" ||
+                      toolCall.toolName === "issue_voucher" ||
+                      toolCall.toolName === "create_complaint" ||
+                      toolCall.toolName === "create_ticket" ||
+                      toolCall.toolName === "update_info")
+                  ) {
+                    toolCall.args.user_id = userId
+                    console.log(`[API] Injected userId ${userId} into tool call args`)
+                  }
+
                   controller.enqueue({
                     success: true,
                     data: { toolCall },
@@ -238,7 +263,6 @@ export async function POST(request: NextRequest) {
                 }
               }
 
-              // Send completion metadata
               const finishReason = await stream.finishReason
               const usage = await stream.usage
               console.log("[API] Stream finished:", { finishReason, usage })
@@ -251,7 +275,6 @@ export async function POST(request: NextRequest) {
                 },
               })
 
-              // Close the stream
               controller.close()
               console.log("[API] Stream closed successfully")
             } catch (error) {
@@ -265,7 +288,6 @@ export async function POST(request: NextRequest) {
           },
         })
 
-        // Transform the stream
         const transformedStream = streamSource.pipeThrough(
           new TransformStream<ParseResult<z.infer<typeof openaiResponsesChunkSchema>>, LanguageModelV1StreamPart>({
             transform(chunk, controller) {
@@ -280,7 +302,6 @@ export async function POST(request: NextRequest) {
 
               const data = chunk.data
 
-              // Process text chunks
               if (data.text) {
                 controller.enqueue({
                   type: "text",
@@ -288,7 +309,6 @@ export async function POST(request: NextRequest) {
                 })
               }
 
-              // Process tool calls
               if (data.toolCall) {
                 controller.enqueue({
                   type: "tool_call",
@@ -296,7 +316,6 @@ export async function POST(request: NextRequest) {
                 })
               }
 
-              // Process metadata
               if (data.finishReason) {
                 controller.enqueue({
                   type: "metadata",
@@ -310,7 +329,6 @@ export async function POST(request: NextRequest) {
           }),
         )
 
-        // Encode the final stream
         const encodedStream = transformedStream.pipeThrough(
           new TransformStream<LanguageModelV1StreamPart, Uint8Array>({
             transform(part, controller) {
@@ -338,7 +356,6 @@ export async function POST(request: NextRequest) {
           }),
         )
 
-        // Return the response
         console.log("[API] Returning stream response, total processing time:", Date.now() - startTime, "ms")
         return new Response(encodedStream, {
           headers: {
@@ -357,7 +374,6 @@ export async function POST(request: NextRequest) {
         )
       }
     } else {
-      // If no Gemini response, return an error
       console.error("[API] No response from Gemini")
       return new Response(JSON.stringify({ error: "No response from Gemini" }), {
         status: 500,

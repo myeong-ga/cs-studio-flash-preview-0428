@@ -3,8 +3,13 @@ export interface ContentItem {
 }
 
 export interface Message {
-  role: "user" | "assistant" | "system"
+  role: "user" | "assistant" | "system" | "function"
   content: string
+  functionCall?: {
+    name: string
+    arguments: string
+  }
+  name?: string // For function role messages
 }
 
 export interface ChatMessage {
@@ -29,9 +34,12 @@ export interface Action {
 }
 
 export interface ToolCall {
-  id: string
-  type: "function"
-  function: {
+  id?: string
+  type?: string
+  toolCallId?: string
+  toolName: string
+  args: any
+  function?: {
     name: string
     arguments: string
   }

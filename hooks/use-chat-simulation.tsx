@@ -5,6 +5,34 @@ import { useState, useCallback, useEffect } from "react"
 import type { Message, SuggestedMessage, Action, ToolCall } from "@/types/chat"
 import { useStore } from "@/lib/store"
 import { requiresConfirmation } from "@/lib/tools/tools"
+import { executeTool } from "@/lib/tools/tools"
+import { useSession, updateActivity } from "@/lib/session"
+
+// 도구 이름을 한글로 매핑하는 객체
+const toolNameMapping: Record<string, string> = {
+  get_order: "주문 조회",
+  get_order_history: "주문 내역 조회",
+  cancel_order: "주문 취소",
+  reset_password: "비밀번호 재설정",
+  send_replacement: "제품 교체",
+  create_refund: "환불 처리",
+  issue_voucher: "바우처 발급",
+  create_return: "반품 신청",
+  create_complaint: "불만 접수",
+  create_ticket: "티켓 생성",
+  update_info: "정보 업데이트",
+}
+
+// 현재 시간을 포맷팅하는 함수
+const formatCurrentTime = (): string => {
+  const now = new Date()
+  const month = now.getMonth() + 1
+  const day = now.getDate()
+  const hours = now.getHours()
+  const minutes = now.getMinutes()
+
+  return `${month}월 ${day}일 ${hours}시 ${minutes}분`
+}
 
 const initialMessages: Message[] = [
   {
@@ -27,6 +55,7 @@ export function useChatSimulation() {
   const [editedMessageContent, setEditedMessageContent] = useState("")
 
   const { cache } = useStore()
+  const session = useSession()
 
   useEffect(() => {
     if (suggestedMessage) {
@@ -69,9 +98,12 @@ export function useChatSimulation() {
     setEditedMessageContent("")
     console.log("[HOOK] Cancelled editing suggested message")
   }, [])
+
   const handleCustomerSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!customerInput.trim()) return
+
+    updateActivity()
 
     const userMessage: Message = {
       role: "user",
@@ -94,6 +126,10 @@ export function useChatSimulation() {
           messages: [...messages, userMessage],
           cacheName: cache.isCreated ? cache.cacheName : undefined,
           useMockData,
+          sessionInfo: {
+            userId: session.userId,
+            sessionId: session.sessionId,
+          },
         }),
       })
 
@@ -132,7 +168,7 @@ export function useChatSimulation() {
             console.log("[HOOK] Successfully parsed JSON:", parsedData)
 
             if (parsedData.text) {
-              console.log("[HOOK] text received:", parsedData.text)
+              console.log("[HOOK] text received:", messageContent)
               messageContent += parsedData.text
 
               setSuggestedMessage({
@@ -148,14 +184,47 @@ export function useChatSimulation() {
               console.log("[HOOK] Tool call received:", parsedData.toolCall)
 
               const toolCall = parsedData.toolCall
+
+              if (
+                toolCall.args &&
+                !toolCall.args.user_id &&
+                (toolCall.toolName === "get_order_history" ||
+                  toolCall.toolName === "reset_password" ||
+                  toolCall.toolName === "issue_voucher" ||
+                  toolCall.toolName === "create_complaint" ||
+                  toolCall.toolName === "create_ticket" ||
+                  toolCall.toolName === "update_info")
+              ) {
+                toolCall.args.user_id = session.userId
+                console.log(`[HOOK] Injected userId ${session.userId} into tool call`)
+              }
+
               toolCalls.push(toolCall)
 
-              if (requiresConfirmation(toolCall.toolName.name)) {
+              // 도구 이름을 한글로 변환
+              const koreanToolName = toolNameMapping[toolCall.toolName] || toolCall.toolName
+
+              // 현재 시간 포맷팅
+              const formattedTime = formatCurrentTime()
+
+              // 새로운 형식의 메시지 생성
+              const toolCallDescription = `고객님께서는 ${formattedTime}에 ${koreanToolName}을(를) 요청하셨습니다.
+매개변수: ${JSON.stringify(toolCall.args, null, 2)}`
+
+              setSuggestedMessage({
+                type: "message",
+                role: "agent",
+                id: Date.now().toString(),
+                content: [{ text: toolCallDescription }],
+                status: "pending",
+              })
+
+              // confirm이 필요한 경우에만 recommendedActions에 추가
+              if (requiresConfirmation(toolCall.toolName)) {
                 try {
-                  const parsedArgs = JSON.parse(toolCall.args)
                   const action: Action = {
-                    name: toolCall.toolName.name,
-                    parameters: parsedArgs,
+                    name: toolCall.toolName,
+                    parameters: toolCall.args,
                   }
 
                   setRecommendedActions((prev) => {
@@ -166,7 +235,7 @@ export function useChatSimulation() {
                     return prev
                   })
                 } catch (e) {
-                  console.error("[HOOK] Error parsing tool call arguments:", e)
+                  console.error("[HOOK] Error processing tool call:", e)
                 }
               }
             }
@@ -217,6 +286,7 @@ export function useChatSimulation() {
       return
     }
 
+    updateActivity()
     console.log("[HOOK] Sending suggested message")
 
     const messageContent = isEditingMessage
@@ -241,6 +311,7 @@ export function useChatSimulation() {
     e.preventDefault()
     if (!operatorInput.trim()) return
 
+    updateActivity()
     console.log("[HOOK] Operator submitted custom message:", operatorInput)
 
     const assistantMessage: Message = {
@@ -254,13 +325,28 @@ export function useChatSimulation() {
   }
 
   const handleExecuteTool = async (actionName: string, parameters: any) => {
+    updateActivity()
     console.log(`[HOOK] Executing tool: ${actionName} with parameters:`, parameters)
 
-    const toolCall = currentToolCalls.find((call) => call.function.name === actionName)
+    const toolCall = currentToolCalls.find((call) => call.toolName === actionName)
 
     if (!toolCall) {
       console.error(`[HOOK] No matching tool call found for ${actionName}`)
       return
+    }
+
+    const toolParameters = { ...parameters }
+    if (
+      !toolParameters.user_id &&
+      (actionName === "get_order_history" ||
+        actionName === "reset_password" ||
+        actionName === "issue_voucher" ||
+        actionName === "create_complaint" ||
+        actionName === "create_ticket" ||
+        actionName === "update_info")
+    ) {
+      toolParameters.user_id = session.userId
+      console.log(`[HOOK] Injected userId ${session.userId} into manual tool execution`)
     }
 
     try {
@@ -273,12 +359,33 @@ export function useChatSimulation() {
 
       setRecommendedActions((prev) => prev.filter((action) => action.name !== actionName))
 
-      const resultMessage: Message = {
-        role: "system",
-        content: `${actionName} executed successfully with parameters: ${JSON.stringify(parameters)}`,
+      const functionCallMessage: Message = {
+        role: "assistant",
+        content: "",
+        functionCall: {
+          name: toolCall.toolName,
+          arguments: JSON.stringify(toolParameters),
+        },
       }
 
-      setMessages((prev) => [...prev, resultMessage])
+      const result = await executeTool(actionName, toolParameters)
+
+      const resultMessage: Message = {
+        role: "function",
+        content: JSON.stringify(result),
+        name: actionName,
+      }
+
+      setMessages((prev) => [...prev, functionCallMessage, resultMessage])
+
+      setCurrentToolCalls([])
+
+      const systemResponseMessage: Message = {
+        role: "system",
+        content: `Tool ${actionName} was executed. You may now want to inform the customer about the result.`,
+      }
+
+      setMessages((prev) => [...prev, systemResponseMessage])
     } catch (error) {
       console.error(`[HOOK] Error executing tool ${actionName}:`, error)
 
@@ -316,9 +423,7 @@ export function useChatSimulation() {
     enableMockData,
   }
 
-  // Add type for the return value
   return result
 }
 
-// Export the return type for type safety
 export type ReturnType<T extends (...args: any) => any> = T extends (...args: any) => infer R ? R : any
