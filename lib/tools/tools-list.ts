@@ -186,9 +186,18 @@ export const agentTools = [
   "update_info",
 ]
 
+// Update get_order function
 export const get_order = async ({ order_id }: { order_id: string }) => {
   try {
-    const res = await fetch(`/api/orders/${order_id}`).then((res) => res.json())
+    console.log(`Fetching order details for order: ${order_id}`)
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"
+    const fullUrl = `${baseUrl}/api/orders/${order_id}`
+    const res = await fetch(fullUrl, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    }).then((res) => res.json())
     return res
   } catch (error) {
     console.error(error)
@@ -196,10 +205,18 @@ export const get_order = async ({ order_id }: { order_id: string }) => {
   }
 }
 
+// Update get_order_history function
 export const get_order_history = async ({ user_id }: { user_id: string }) => {
   try {
     console.log(`Fetching order history for user: ${user_id}`)
-    const res = await fetch(`/api/users/${user_id}/order_history`).then((res) => res.json())
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"
+    const fullUrl = `${baseUrl}/api/users/${user_id}/order_history`
+    const res = await fetch(fullUrl, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    }).then((res) => res.json())
     return res
   } catch (error) {
     console.error(error)
@@ -207,9 +224,12 @@ export const get_order_history = async ({ user_id }: { user_id: string }) => {
   }
 }
 
+// Update cancel_order function
 export const cancel_order = async ({ order_id }: { order_id: string }) => {
   try {
-    const res = await fetch(`/api/orders/${order_id}/cancel`, {
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"
+    const fullUrl = `${baseUrl}/api/orders/${order_id}/cancel`
+    const res = await fetch(fullUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -222,9 +242,12 @@ export const cancel_order = async ({ order_id }: { order_id: string }) => {
   }
 }
 
+// Update reset_password function
 export const reset_password = async ({ user_id }: { user_id: string }) => {
   try {
-    const res = await fetch(`/api/users/${user_id}/reset_password`, {
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"
+    const fullUrl = `${baseUrl}/api/users/${user_id}/reset_password`
+    const res = await fetch(fullUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -238,6 +261,7 @@ export const reset_password = async ({ user_id }: { user_id: string }) => {
   }
 }
 
+// Update send_replacement function
 export const send_replacement = async ({
   product_id,
   order_id,
@@ -246,7 +270,9 @@ export const send_replacement = async ({
   order_id: string
 }) => {
   try {
-    const res = await fetch(`/api/orders/${order_id}/send_replacement`, {
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"
+    const fullUrl = `${baseUrl}/api/orders/${order_id}/send_replacement`
+    const res = await fetch(fullUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -260,6 +286,7 @@ export const send_replacement = async ({
   }
 }
 
+// Update create_refund function
 export const create_refund = async ({
   order_id,
   amount,
@@ -270,7 +297,9 @@ export const create_refund = async ({
   reason: string
 }) => {
   try {
-    const res = await fetch(`/api/orders/${order_id}/create_refund`, {
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"
+    const fullUrl = `${baseUrl}/api/orders/${order_id}/create_refund`
+    const res = await fetch(fullUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -284,6 +313,7 @@ export const create_refund = async ({
   }
 }
 
+// Update issue_voucher function
 export const issue_voucher = async ({
   user_id,
   amount,
@@ -294,7 +324,9 @@ export const issue_voucher = async ({
   amount: number
 }) => {
   try {
-    const res = await fetch(`/api/vouchers/create`, {
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"
+    const fullUrl = `${baseUrl}/api/vouchers/create`
+    const res = await fetch(fullUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -308,6 +340,7 @@ export const issue_voucher = async ({
   }
 }
 
+// Update create_return function
 export const create_return = async ({
   order_id,
   product_ids,
@@ -316,7 +349,9 @@ export const create_return = async ({
   product_ids: string[]
 }) => {
   try {
-    const res = await fetch(`/api/orders/${order_id}/create_return`, {
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"
+    const fullUrl = `${baseUrl}/api/orders/${order_id}/create_return`
+    const res = await fetch(fullUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -330,6 +365,7 @@ export const create_return = async ({
   }
 }
 
+// Update create_complaint function
 export const create_complaint = async ({
   user_id,
   type,
@@ -342,7 +378,9 @@ export const create_complaint = async ({
   order_id: string
 }) => {
   try {
-    const res = await fetch(`/api/complaints/create`, {
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"
+    const fullUrl = `${baseUrl}/api/complaints/create`
+    const res = await fetch(fullUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -356,6 +394,7 @@ export const create_complaint = async ({
   }
 }
 
+// Update create_ticket function
 export const create_ticket = async ({
   user_id,
   type,
@@ -368,7 +407,9 @@ export const create_ticket = async ({
   order_id: string
 }) => {
   try {
-    const res = await fetch(`/api/tickets/create`, {
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"
+    const fullUrl = `${baseUrl}/api/tickets/create`
+    const res = await fetch(fullUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -382,6 +423,7 @@ export const create_ticket = async ({
   }
 }
 
+// Update update_info function
 export const update_info = async ({
   user_id,
   info,
@@ -390,7 +432,9 @@ export const update_info = async ({
   info: { field: string; value: string }
 }) => {
   try {
-    const res = await fetch(`/api/users/${user_id}/update_info`, {
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"
+    const fullUrl = `${baseUrl}/api/users/${user_id}/update_info`
+    const res = await fetch(fullUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

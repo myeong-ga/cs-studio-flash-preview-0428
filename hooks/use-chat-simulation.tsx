@@ -5,7 +5,7 @@ import { useState, useCallback, useEffect } from "react"
 import type { Message, SuggestedMessage, Action, ToolCall } from "@/types/chat"
 import { useStore } from "@/lib/store"
 import { requiresConfirmation } from "@/lib/tools/tools"
-import { executeTool } from "@/lib/tools/tools"
+import { executeTool } from "@/lib/execute-tool"
 import { useSession, updateActivity } from "@/lib/session"
 
 // 도구 이름을 한글로 매핑하는 객체
@@ -350,15 +350,13 @@ export function useChatSimulation() {
     }
 
     try {
-      const toolMessage: Message = {
-        role: "system",
-        content: `Executing ${actionName}...`,
-      }
+      setIsLoading(true)
 
-      setMessages((prev) => [...prev, toolMessage])
+      // 서버 함수 직접 호출
+      const result = await executeTool(actionName, toolParameters)
+      console.log(`[HOOK] Tool ${actionName} execution result:`, result)
 
-      setRecommendedActions((prev) => prev.filter((action) => action.name !== actionName))
-
+      // 함수 호출 메시지 추가
       const functionCallMessage: Message = {
         role: "assistant",
         content: "",
@@ -368,33 +366,50 @@ export function useChatSimulation() {
         },
       }
 
-      const result = await executeTool(actionName, toolParameters)
-
+      // 함수 결과 메시지 추가
       const resultMessage: Message = {
         role: "function",
-        content: JSON.stringify(result),
+        content: JSON.stringify(result.result),
         name: actionName,
       }
 
+      // 메시지 배열에 추가
       setMessages((prev) => [...prev, functionCallMessage, resultMessage])
 
+      // 추천 액션에서 제거
+      setRecommendedActions((prev) => prev.filter((action) => action.name !== actionName))
+
+      // 현재 툴 콜 초기화
       setCurrentToolCalls([])
 
-      const systemResponseMessage: Message = {
-        role: "system",
-        content: `Tool ${actionName} was executed. You may now want to inform the customer about the result.`,
-      }
+      // 결과를 Suggested Message로 표시
+      const koreanToolName = toolNameMapping[actionName] || actionName
+      const resultContent =
+        typeof result.result === "object" ? JSON.stringify(result.result, null, 2) : result.result.toString()
 
-      setMessages((prev) => [...prev, systemResponseMessage])
+      setSuggestedMessage({
+        type: "message",
+        role: "agent",
+        id: Date.now().toString(),
+        content: [{ text: `${koreanToolName} 실행 결과:\n${resultContent}` }],
+        status: "pending",
+      })
     } catch (error) {
       console.error(`[HOOK] Error executing tool ${actionName}:`, error)
 
-      const errorMessage: Message = {
-        role: "system",
-        content: `Error executing ${actionName}: ${error instanceof Error ? error.message : "Unknown error"}`,
-      }
-
-      setMessages((prev) => [...prev, errorMessage])
+      setSuggestedMessage({
+        type: "message",
+        role: "agent",
+        id: Date.now().toString(),
+        content: [
+          {
+            text: `${actionName} 실행 중 오류가 발생했습니다: ${error instanceof Error ? error.message : "알 수 없는 오류"}`,
+          },
+        ],
+        status: "pending",
+      })
+    } finally {
+      setIsLoading(false)
     }
   }
 

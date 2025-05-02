@@ -1,17 +1,14 @@
 import { NextResponse } from "next/server"
 import { DEMO_ORDERS, USER_INFO } from "@/types/chat"
 
-export async function GET(request: Request, { params }: { params: { userId: string } }) {
+export async function GET(request: Request, { params }: { params: Promise<{ userId: string }> }) {
   try {
-    const userId = params.userId
+    const { userId } = await params
 
     // Check if user exists
     if (userId !== USER_INFO.name && userId !== "cus_28X44") {
       return NextResponse.json({ error: `User with ID ${userId} not found` }, { status: 404 })
     }
-
-    // Simulate a delay
-    await new Promise((resolve) => setTimeout(resolve, 500))
 
     // Return the demo orders as the user's order history
     return NextResponse.json({

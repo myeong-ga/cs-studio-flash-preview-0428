@@ -194,9 +194,9 @@ Otherwise, you can suggest a response for the human representative to send.`,
           controller.abort()
           console.error("[API] OpenAI request timed out after", API_TIMEOUT, "ms")
         }, API_TIMEOUT)
-
+        let stepCounter = 0;
         const stream = streamText({
-          model: openai("gpt-4.1-mini"),
+          model: openai("gpt-4o-mini"),
           messages: regularMessages,
           system: systemMessage,
           tools: tools,
@@ -204,6 +204,34 @@ Otherwise, you can suggest a response for the human representative to send.`,
           temperature: 0.7,
           maxSteps: 10,
           abortSignal: controller.signal,
+          onStepFinish: ({ toolCalls, toolResults, finishReason, usage, text, reasoning }) => {
+            stepCounter++;
+            console.log(`\n📊 Step ${stepCounter} Finished:`);
+            console.log('🏁 Finish Reason:', finishReason);
+            console.log('💭 Reasoning:', reasoning);
+      
+            console.log('💬 Model Response:', text);
+            
+            if (toolCalls && toolCalls.length > 0) {
+              console.log('🛠️ Tool Calls:');
+              toolCalls.forEach((call, index) => {
+                console.log(`  [${index + 1}] Tool: ${call.toolName}, Arguments:`, call.args);
+              });
+            }
+            
+            if (toolResults && toolResults.length > 0) {
+              console.log('🔧 Tool Results:');
+              toolResults.forEach((result, index) => {
+                console.log(`  [${index + 1}] Result:`, typeof result === 'object' ? JSON.stringify(result) : result);
+              });
+            }
+            
+            if (usage) {
+              console.log('📈 Usage:', usage);
+            }
+            
+            console.log('------------------------');
+          },
           onError: (error) => {
             console.error("[API] OpenAI stream error:", error)
 

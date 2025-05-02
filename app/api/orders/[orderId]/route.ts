@@ -7,9 +7,9 @@ const USER_INFO = {
   phone: "123-456-7890",
 }
 
-export async function GET(request: Request, { params }: { params: { orderId: string } }) {
+export async function GET(request: Request, { params }: { params: Promise<{ orderId: string }> }) {
   try {
-    const orderId = params.orderId
+    const { orderId } = await params
 
     // Find the order in the demo orders
     const order = DEMO_ORDERS.find((order) => order.id === orderId)
@@ -17,9 +17,6 @@ export async function GET(request: Request, { params }: { params: { orderId: str
     if (!order) {
       return NextResponse.json({ error: `Order with ID ${orderId} not found` }, { status: 404 })
     }
-
-    // Simulate a delay
-    await new Promise((resolve) => setTimeout(resolve, 500))
 
     // Add some additional information for better responses
     const enhancedOrder = {

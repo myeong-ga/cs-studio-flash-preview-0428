@@ -72,20 +72,4 @@ export const requiresConfirmation = (toolName: string): boolean => {
   return agentTools.includes(toolName)
 }
 
-export const executeTool = async (toolName: string, parameters: Record<string, any>): Promise<any> => {
-  if (!functionsMap[toolName]) {
-    throw new Error(`Tool function ${toolName} not found`)
-  }
-
-  try {
-    console.log(`[TOOLS] Executing tool: ${toolName} with parameters:`, parameters)
-    const result = await functionsMap[toolName](parameters)
-    console.log(`[TOOLS] Tool ${toolName} execution result:`, result)
-    return result
-  } catch (error) {
-    console.error(`[TOOLS] Error executing tool ${toolName}:`, error)
-    throw error
-  }
-}
-
 export { toolsList, agentTools, functionsMap }
