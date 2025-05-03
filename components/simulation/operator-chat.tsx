@@ -120,11 +120,15 @@ export function OperatorChat({
           >
             {message.role !== "assistant" && (
               <Avatar className="h-8 w-8 border-2 border-microsoft-blue-light">
-                <AvatarImage src="/placeholder.svg?height=32&width=32" />
+                <AvatarImage
+                  src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/cs-i-icon-E1sXTYLbmeSj4yIRHz6OwXRgplbKzZ.jpeg"
+                  alt="고객"
+                />
                 <AvatarFallback className="bg-gray-500 text-white">고객</AvatarFallback>
               </Avatar>
             )}
             <div
+              style={{ whiteSpace: "pre-wrap" }}
               className={`rounded-sm px-3 py-2 max-w-[80%] ${
                 message.role === "assistant" ? messageAssistantClass : messageUserClass
               }`}
@@ -133,7 +137,10 @@ export function OperatorChat({
             </div>
             {message.role === "assistant" && (
               <Avatar className="h-8 w-8 border-2 border-microsoft-blue-light">
-                <AvatarImage src="/placeholder.svg?height=32&width=32" />
+                 <AvatarImage
+                                  src="/images/cs-icon.png"   
+                                  alt="CS"
+                                />
                 <AvatarFallback className="bg-microsoft-blue text-white">CS</AvatarFallback>
               </Avatar>
             )}
@@ -167,7 +174,7 @@ export function OperatorChat({
                   style={{ width: "100%", minHeight: "100px" }}
                 />
               ) : (
-                suggestedMessage.content.map((item, idx) => <p key={idx}>{item.text}</p>)
+                suggestedMessage.content.map((item, idx) => <p key={idx} style={{ whiteSpace: "pre-wrap" }}>{item.text}</p>)
               )}
             </div>
             <div className="flex gap-2">

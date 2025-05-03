@@ -59,11 +59,15 @@ export function CustomerChat({
           >
             {message.role !== "user" && (
               <Avatar className="h-8 w-8 border-2 border-microsoft-blue-light">
-                <AvatarImage src="/placeholder.svg?height=32&width=32" />
+                <AvatarImage
+                  src="/images/cs-icon.png"   
+                  alt="CS"
+                />
                 <AvatarFallback className="bg-microsoft-blue text-white">CS</AvatarFallback>
               </Avatar>
             )}
             <div
+            style={{ whiteSpace: "pre-wrap" }}
               className={`rounded-sm px-3 py-2 max-w-[80%] ${
                 message.role === "user" ? messageUserClass : messageAssistantClass
               }`}
@@ -72,7 +76,10 @@ export function CustomerChat({
             </div>
             {message.role === "user" && (
               <Avatar className="h-8 w-8 border-2 border-microsoft-blue-light">
-                <AvatarImage src="/placeholder.svg?height=32&width=32" />
+                <AvatarImage
+                  src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/cs-i-icon-E1sXTYLbmeSj4yIRHz6OwXRgplbKzZ.jpeg"
+                  alt="고객"
+                />
                 <AvatarFallback className="bg-gray-500 text-white">고객</AvatarFallback>
               </Avatar>
             )}

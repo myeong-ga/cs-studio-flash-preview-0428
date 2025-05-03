@@ -50,7 +50,7 @@ export function SimulationContainer({
         setInput={chatSimulation.setCustomerInput}
         handleSubmit={chatSimulation.handleCustomerSubmit}
         isLoading={chatSimulation.isLoading}
-        useSimTheme={false}
+        useSimTheme={true}
       />
     ),
     [
@@ -73,7 +73,7 @@ export function SimulationContainer({
         isLoading={chatSimulation.isLoading}
         suggestedMessage={chatSimulation.suggestedMessage}
         handleSendSuggestedMessage={chatSimulation.handleSendSuggestedMessage}
-        useSimTheme={false}
+        useSimTheme={true}
         isEditingMessage={chatSimulation.isEditingMessage}
         editedMessageContent={chatSimulation.editedMessageContent}
         setEditedMessageContent={chatSimulation.setEditedMessageContent}
@@ -101,7 +101,7 @@ export function SimulationContainer({
   const customerInfoComponent = useMemo(
     () => (
       <CustomerInfo
-        useSimTheme={false}
+        useSimTheme={true}
         recommendedActions={chatSimulation.recommendedActions}
         onExecuteTool={chatSimulation.handleExecuteTool}
       />
@@ -123,7 +123,7 @@ export function SimulationContainer({
   }
 
   return (
-    <div className="w-full h-[calc(100vh-12rem)] overflow-auto font-geist-mono simulation-theme flex flex-col">
+    <div className="w-full h-[calc(100vh-12rem)] overflow-auto  font-geist-mono simulation-theme flex flex-col">
       {/* Mock data toggle switch - memoized */}
       <div className="flex-shrink-0">{mockDataToggle}</div>
 
@@ -133,7 +133,7 @@ export function SimulationContainer({
           <div className="sim-header py-2 px-4 rounded-t-md flex-shrink-0 sticky top-0 z-10">
             <h2 className="text-center font-medium">고객 화면</h2>
           </div>
-          <div className="flex-1 min-h-0 overflow-auto flex flex-col">{customerChatComponent}</div>
+          <div className="flex-1 min-h-0 overflow-hidden flex flex-col">{customerChatComponent}</div>
         </div>
 
         {/* Representative View - 3/4 width on large screens, full width on small screens */}
@@ -143,7 +143,7 @@ export function SimulationContainer({
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 h-full min-h-0">
             {/* Chat Area - 3/5 width on large screens, full width on small screens */}
-            <div className="lg:col-span-3 h-full min-h-0 overflow-auto flex flex-col">{operatorChatComponent}</div>
+            <div className="lg:col-span-3 h-full min-h-0 overflow-hidden flex flex-col">{operatorChatComponent}</div>
 
             {/* Customer Info Area - 2/5 width on large screens, full width on small screens */}
             <div className="lg:col-span-2 h-full min-h-0 overflow-auto">{customerInfoComponent}</div>

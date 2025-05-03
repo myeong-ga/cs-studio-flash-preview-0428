@@ -102,7 +102,10 @@ export function DashboardSidebar() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="w-full justify-start gap-2 hover:bg-microsoft-blue-lighter">
               <Avatar className="h-6 w-6">
-                <AvatarImage src="/placeholder.svg?height=32&width=32" />
+                 <AvatarImage
+                                  src="/images/cs-icon.png"   
+                                  alt="CS"
+                                />
                 <AvatarFallback>CS</AvatarFallback>
               </Avatar>
               <span>CS 매니저</span>

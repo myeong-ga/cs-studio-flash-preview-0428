@@ -82,6 +82,22 @@
   --sim-muted: oklch(0.85 0.04 49.09);
   --sim-muted-foreground: oklch(0.54 0.05 37.21);
   --sim-border: oklch(0.75 0.04 80.55);
+
+  /* 모카 무스 커피 톤 변수 */
+  --mocha-bg-light: #f8f4ea;
+  --mocha-bg-dark: #3a2a1d;
+  --mocha-text-light: #6b4226;
+  --mocha-text-dark: #e6d7c3;
+  --mocha-border-light: #d2b48c;
+  --mocha-border-dark: #8b5a2b;
+  --mocha-accent-light: #8b5a2b;
+  --mocha-accent-dark: #d2b48c;
+  --mocha-hover-light: #ebe3d5;
+  --mocha-hover-dark: #4a3828;
+  --mocha-muted-light: #8b6d5c;
+  --mocha-muted-dark: #c9b8a8;
+  --mocha-input-bg-light: #fff8ee;
+  --mocha-input-bg-dark: #2a1f16;
 }
 
 .dark .simulation-theme {
@@ -204,4 +220,72 @@
 
 .simulation-theme .sim-muted-text {
   color: var(--sim-muted-foreground);
+}
+
+/* 모카 무스 다이얼로그 스타일 추가 */
+.simulation-theme .mocha-dialog {
+  background-color: var(--mocha-bg-light);
+  color: var(--mocha-text-light);
+  border-color: var(--mocha-border-light);
+}
+
+.dark .simulation-theme .mocha-dialog {
+  background-color: var(--mocha-bg-dark);
+  color: var(--mocha-text-dark);
+  border-color: var(--mocha-border-dark);
+}
+
+.simulation-theme .mocha-dialog-title {
+  color: var(--mocha-text-light);
+}
+
+.dark .simulation-theme .mocha-dialog-title {
+  color: var(--mocha-text-dark);
+}
+
+.simulation-theme .mocha-dialog-description {
+  color: var(--mocha-muted-light);
+}
+
+.dark .simulation-theme .mocha-dialog-description {
+  color: var(--mocha-muted-dark);
+}
+
+.simulation-theme .mocha-button {
+  background-color: var(--mocha-accent-light);
+  color: white;
+}
+
+.simulation-theme .mocha-button:hover {
+  background-color: var(--mocha-text-light);
+}
+
+.dark .simulation-theme .mocha-button {
+  background-color: var(--mocha-accent-dark);
+  color: var(--mocha-bg-dark);
+}
+
+.dark .simulation-theme .mocha-button:hover {
+  background-color: var(--mocha-muted-dark);
+}
+
+.simulation-theme .mocha-input {
+  background-color: var(--mocha-input-bg-light);
+  border-color: var(--mocha-border-light);
+}
+
+.simulation-theme .mocha-input:focus-visible {
+  border-color: var(--mocha-accent-light);
+  ring-color: var(--mocha-accent-light);
+}
+
+.dark .simulation-theme .mocha-input {
+  background-color: var(--mocha-input-bg-dark);
+  border-color: var(--mocha-border-dark);
+  color: var(--mocha-text-dark);
+}
+
+.dark .simulation-theme .mocha-input:focus-visible {
+  border-color: var(--mocha-accent-dark);
+  ring-color: var(--mocha-accent-dark);
 }

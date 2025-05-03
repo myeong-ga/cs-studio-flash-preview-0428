@@ -374,7 +374,7 @@ export function useChatSimulation() {
       }
 
       // 메시지 배열에 추가
-      setMessages((prev) => [...prev, functionCallMessage, resultMessage])
+      //setMessages((prev) => [...prev, functionCallMessage, resultMessage])
 
       // 추천 액션에서 제거
       setRecommendedActions((prev) => prev.filter((action) => action.name !== actionName))

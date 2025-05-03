@@ -196,7 +196,7 @@ Otherwise, you can suggest a response for the human representative to send.`,
         }, API_TIMEOUT)
         let stepCounter = 0;
         const stream = streamText({
-          model: openai("gpt-4o-mini"),
+          model: openai("gpt-4.1-mini"),
           messages: regularMessages,
           system: systemMessage,
           tools: tools,
